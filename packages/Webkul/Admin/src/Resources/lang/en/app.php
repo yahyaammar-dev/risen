@@ -522,6 +522,7 @@ return [
         'products' => [
             'title'                         => 'Products',
             'add-product-btn-title'         => 'Add Product',
+            'upload-product'                => 'Upload Product',
             'add-title'                     => 'Add Product',
             'edit-title'                    => 'Edit Product',
             'save-btn-title'                => 'Save Product',

@@ -3,6 +3,8 @@
 namespace Webkul\Velocity\Http\Controllers\Shop;
 
 use Webkul\Product\Facades\ProductImage;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 class ShopController extends Controller
 {
@@ -34,25 +36,63 @@ class ShopController extends Controller
             $galleryImages = ProductImage::getProductBaseImage($product);
 
             $response = [
-                'status'  => true,
+                'status' => true,
                 'details' => [
-                    'name'         => $product->name,
-                    'urlKey'       => $product->url_key,
-                    'priceHTML'    => view('shop::products.price', ['product' => $product])->render(),
+                    'name' => $product->name,
+                    'urlKey' => $product->url_key,
+                    'priceHTML' => view('shop::products.price', ['product' => $product])->render(),
                     'totalReviews' => $productReviewHelper->getTotalReviews($product),
-                    'rating'       => ceil($productReviewHelper->getAverageRating($product)),
-                    'image'        => $galleryImages['small_image_url'],
+                    'rating' => ceil($productReviewHelper->getAverageRating($product)),
+                    'image' => $galleryImages['small_image_url'],
                 ],
             ];
         } else {
             $response = [
                 'status' => false,
-                'slug'   => $slug,
+                'slug' => $slug,
             ];
         }
 
         return $response;
     }
+
+
+
+    /**
+     * Fetch product details.
+     *
+     * @param  string  $slug
+     * @return \Illuminate\Http\Response
+     */
+    public function fetchProductDetails2($id)
+    {
+        $product = $this->productRepository->find($id);
+
+        if ($product) {
+
+            $galleryImages = ProductImage::getProductBaseImage($product);
+
+            $product['gallery'] = $galleryImages;
+
+            $response = [
+                'status' => true,
+                'details' => [
+                    'product' => $product
+                ],
+            ];
+        } else {
+            $response = [
+                'status' => false,
+                'slug' => $id,
+            ];
+        }
+
+        return $response;
+    }
+
+
+
+
 
     /**
      * Fetch category details.
@@ -63,7 +103,7 @@ class ShopController extends Controller
     {
         $slug = request()->get('category-slug');
 
-        if (! $slug) {
+        if (!$slug) {
             abort(404);
         }
 
@@ -79,7 +119,7 @@ class ShopController extends Controller
                 }
 
                 $response = [
-                    'status'   => true,
+                    'status' => true,
                     'products' => $products->map(function ($product) {
                         if (core()->getConfigData('catalog.products.homepage.out_of_stock_items')) {
                             return $this->velocityHelper->formatProduct($product);
@@ -111,9 +151,9 @@ class ShopController extends Controller
                     }
 
                     $response = [
-                        'status'           => true,
-                        'list'             => $list,
-                        'categoryDetails'  => $categoryDetails,
+                        'status' => true,
+                        'list' => $list,
+                        'categoryDetails' => $categoryDetails,
                         'categoryProducts' => $customizedProducts,
                     ];
                 }
@@ -158,7 +198,7 @@ class ShopController extends Controller
 
         if ($categoryDetails) {
             $response = [
-                'status'          => true,
+                'status' => true,
                 'categoryDetails' => $this->getCategoryFilteredData($categoryDetails),
             ];
         }
@@ -187,7 +227,7 @@ class ShopController extends Controller
     {
         if ($customer = auth()->guard('customer')->user()) {
 
-            if (! core()->getConfigData('catalog.products.homepage.out_of_stock_items')) {
+            if (!core()->getConfigData('catalog.products.homepage.out_of_stock_items')) {
                 $wishlistItemsCount = $this->wishlistRepository->getModel()
                     ->leftJoin('products as ps', 'wishlist.product_id', '=', 'ps.id')
                     ->leftJoin('product_inventories as pv', 'ps.id', '=', 'pv.product_id')
@@ -202,7 +242,7 @@ class ShopController extends Controller
             } else {
                 $wishlistItemsCount = $this->wishlistRepository->count([
                     'customer_id' => $customer->id,
-                    'channel_id'  => core()->getCurrentChannel()->id,
+                    'channel_id' => core()->getCurrentChannel()->id,
                 ]);
             }
 
@@ -211,8 +251,8 @@ class ShopController extends Controller
             ]);
 
             $response = [
-                'status'                  => true,
-                'compareProductsCount'    => $comparedItemsCount,
+                'status' => true,
+                'compareProductsCount' => $comparedItemsCount,
                 'wishlistedProductsCount' => $wishlistItemsCount,
             ];
         }
@@ -235,7 +275,7 @@ class ShopController extends Controller
             $productCollection = $this->velocityHelper->fetchProductCollection($items, $moveToCart);
 
             $response = [
-                'status'   => 'success',
+                'status' => 'success',
                 'products' => $productCollection,
             ];
         }
@@ -258,9 +298,9 @@ class ShopController extends Controller
         $categoryDetails = $this->categoryRepository->find($categoryId);
 
         /* if category not found then return empty response */
-        if (! $categoryDetails) {
+        if (!$categoryDetails) {
             return response()->json([
-                'products'       => [],
+                'products' => [],
                 'paginationHTML' => '',
             ]);
         }
@@ -271,12 +311,114 @@ class ShopController extends Controller
 
         /* sending response */
         return response()->json([
-            'products'       => collect($products->items())->map(function ($product) {
-                return $this->velocityHelper->formatProduct($product);
-            }),
-            'paginationHTML' => $products->appends(request()->input())->links()->toHtml(),
+            'products' => $products
         ]);
     }
+
+
+
+
+
+
+    /**
+     * This method will fetch products from category.
+     *
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function getProducts()
+    {
+        /* fetch category details */
+        $products = $this->productRepository->getAll();
+
+        return $products;
+    }
+
+
+
+
+
+
+    /**
+     * This method will fetch products from category.
+     *
+     * @param  int  $categoryId
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function getCategoryProducts2($categoryId)
+    {
+        /* fetch category details */
+        $categoryDetails = $this->categoryRepository->find($categoryId);
+
+        /* if category not found then return empty response */
+        if (!$categoryDetails) {
+            return response()->json([
+                'products' => [],
+                'paginationHTML' => '',
+            ]);
+        }
+
+        /* fetching products */
+        $products = $this->productRepository->getAll($categoryId);
+        // $products->withPath($categoryDetails->slug);
+        return $products;
+    }
+
+
+    /**
+     * This method will fetch products from category.
+     *
+     * @param  int  $categoryId
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function createUser()
+    {
+        DB::table('users')->insert([
+            'name' => request()->input('first_name') . request()->input('last_name'),
+            'email' => request()->input('email'),
+            'password' => Hash::make(request()->input('password')),
+        ]);
+
+
+        return response()->json(['message' => 'User created successfully'], 201);
+    }
+
+
+
+
+
+    /**
+     * This method will fetch products from category.
+     *
+     * @param  int  $categoryId
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function loginUser()
+    {
+        // Retrieve the user from the database based on email
+        $user = DB::table('users')->where('email', request()->input('email'))->first();
+
+        // Check if user exists
+        if ($user) {
+            // Verify the password
+            if (Hash::check(request()->input('password'), $user->password)) {
+               
+
+                return response()->json(['message' => 'Login successful'], 200);
+            }
+        }
+
+        // If user does not exist or password is incorrect, return an error response
+        return response()->json(['message' => 'Unauthorized'], 401);
+
+    }
+
+
+
+
 
     /**
      * Get category filtered data.
@@ -293,12 +435,12 @@ class ShopController extends Controller
         }
 
         return [
-            'id'                => $category->id,
-            'slug'              => $category->slug,
-            'name'              => $category->name,
-            'children'          => $formattedChildCategory,
+            'id' => $category->id,
+            'slug' => $category->slug,
+            'name' => $category->name,
+            'children' => $formattedChildCategory,
             'category_icon_url' => $category->category_icon_url,
-            'image_url'         => $category->image_url,
+            'image_url' => $category->image_url,
         ];
     }
 }

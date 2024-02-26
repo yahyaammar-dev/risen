@@ -218,6 +218,25 @@ class OnepageController extends Controller
         ]);
     }
 
+
+      /**
+     * Saves order.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function saveOrder2()
+    {
+        // $order = $this->orderRepository->create(Cart::prepareDataForOrder());
+
+        // create your order here
+        
+        return response()->json([
+            'success' => true,
+        ]);
+    }
+
+
+
     /**
      * Order success page.
      *

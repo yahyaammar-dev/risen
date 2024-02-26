@@ -49,8 +49,17 @@ Route::group(['middleware' => ['web', 'locale', 'theme', 'currency']], function 
         /**
          * Categories and products.
          */
+
+
+
+        Route::get('/get-all-products', [ShopController::class, 'getProducts'])
+        ->name('velocity.all.products');
+
         Route::get('/product-details/{slug}', [ShopController::class, 'fetchProductDetails'])
             ->name('velocity.shop.product');
+        
+        Route::get('/product-details2/{id}', [ShopController::class, 'fetchProductDetails2'])
+            ->name('velocity.shop.product2');
 
         Route::get('/categorysearch', [ShopController::class, 'search'])
             ->name('velocity.search.index')
@@ -66,6 +75,25 @@ Route::group(['middleware' => ['web', 'locale', 'theme', 'currency']], function 
 
         Route::get('/category-products/{categoryId}', [ShopController::class, 'getCategoryProducts'])
             ->name('velocity.category.products');
+
+        Route::get('/category-products2/{categoryId}', [ShopController::class, 'getCategoryProducts2'])
+        ->name('velocity.category.products2');
+
+
+        Route::get('/token', function(){
+            return response()->json([
+                'token' => csrf_token()
+            ]);
+        })
+        ->name('velocity.category.products2');
+
+
+        Route::post('/create-user-apk', [ShopController::class, 'createUser'])
+        ->name('velocity.user.createUser');
+
+        Route::post('/login-user-apk', [ShopController::class, 'loginUser'])
+        ->name('velocity.user.loginUser');
+
     });
 
     /**

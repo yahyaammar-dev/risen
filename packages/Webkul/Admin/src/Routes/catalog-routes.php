@@ -27,9 +27,17 @@ Route::group(['middleware' => ['web', 'admin', 'admin_locale'], 'prefix' => conf
             'view' => 'admin::catalog.products.create',
         ])->name('admin.catalog.products.create');
 
+        Route::get('/products/upload', [ProductController::class, 'upload'])->defaults('_config', [
+            'view' => 'admin::catalog.products.upload',
+        ])->name('admin.catalog.products.upload');
+
         Route::post('/products/create', [ProductController::class, 'store'])->defaults('_config', [
             'redirect' => 'admin.catalog.products.edit',
         ])->name('admin.catalog.products.store');
+
+        Route::post('/products/uploadproducts', [ProductController::class, 'uploadproducts'])->defaults('_config', [
+            'redirect' => 'admin.catalog.products.index',
+        ])->name('admin.catalog.products.uploadproducts');
 
         Route::get('products/copy/{id}', [ProductController::class, 'copy'])->defaults('_config', [
             'view' => 'admin::catalog.products.edit',

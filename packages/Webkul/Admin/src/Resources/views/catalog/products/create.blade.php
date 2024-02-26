@@ -40,7 +40,6 @@
 
             <div class="page-content">
                 @csrf()
-
                 @php
                     $familyId = request()->input('family');
                 @endphp
@@ -50,7 +49,6 @@
                 <accordian :title="'{{ __('admin::app.catalog.products.general') }}'" :active="true">
                     <div slot="body">
                         {!! view_render_event('bagisto.admin.catalog.product.create_form_accordian.general.controls.before') !!}
-
                         <div class="control-group" :class="[errors.has('type') ? 'has-error' : '']">
                             <label for="type" class="required">{{ __('admin::app.catalog.products.product-type') }}</label>
 
@@ -68,6 +66,7 @@
                             @endif
 
                             <span class="control-error" v-if="errors.has('type')">@{{ errors.first('type') }}</span>
+
                         </div>
 
                         <div class="control-group" :class="[errors.has('attribute_family_id') ? 'has-error' : '']">
@@ -93,6 +92,32 @@
 
                             <span class="control-error" v-if="errors.has('sku')">@{{ errors.first('sku') }}</span>
                         </div>
+                        
+
+
+
+                        <div class="control-group" :class="[errors.has('attribute_family_id') ? 'has-error' : '']">
+                            <label for="branch_name" class="required">Branch name</label>
+
+                            <select class="control" v-validate="'required'" id="branch_name" name="branch_name" data-vv-as="&quot;{{ __('admin::app.catalog.products.familiy') }}&quot;">
+                                <option value="branch01">Branch 01</option>
+                                <option value="branch02">Branch 02</option>
+                                <option value="branch03">Branch 03</option>
+                                <option value="branch04">Branch 04</option>
+                                <option value="branch05">Branch 05</option>
+                                <option value="branch06">Branch 06</option>
+                                <option value="branch07">Branch 07</option>
+                            </select>
+
+                            @if ($familyId)
+                                <input type="hidden" name="attribute_family_id" value="{{ $familyId }}"/>
+                            @endif
+
+                            <span class="control-error" v-if="errors.has('attribute_family_id')">@{{ errors.first('attribute_family_id') }}</span>
+                        </div>
+
+
+
 
                         {!! view_render_event('bagisto.admin.catalog.product.create_form_accordian.general.controls.after') !!}
                     </div>

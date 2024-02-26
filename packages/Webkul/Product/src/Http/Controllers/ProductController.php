@@ -18,6 +18,8 @@ use Webkul\Product\Repositories\ProductDownloadableLinkRepository;
 use Webkul\Product\Repositories\ProductDownloadableSampleRepository;
 use Webkul\Product\Repositories\ProductInventoryRepository;
 use Webkul\Product\Repositories\ProductRepository;
+use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\DB;
 
 class ProductController extends Controller
 {
@@ -158,6 +160,58 @@ class ProductController extends Controller
     }
 
     /**
+     * Show the form for uploading resources.
+     *
+     * @return \Illuminate\View\View
+     */
+    public function upload()
+    {
+        $families = $this->attributeFamilyRepository->all();
+
+        $configurableFamily = null;
+
+        if ($familyId = request()->get('family')) {
+            $configurableFamily = $this->attributeFamilyRepository->find($familyId);
+        }
+
+        return view($this->_config['view'], compact('families', 'configurableFamily'));
+    }
+
+    public function uploadProducts()
+    {
+        $file = request()->file('product_file');
+        $filePath = $file->storeAs('uploads', $file->getClientOriginalName());
+        $excelData = Excel::toArray([], $filePath);
+
+        // check the fields
+        if ($excelData[0][0][0] != 'sku' || $excelData[0][0][1] != 'type') {
+            session()->flash('error', 'SKU and type fields are required.');
+            return redirect()->back();
+        }
+
+
+        foreach ($excelData[0] as $product) {
+            try {
+
+                $this->productRepository->create([
+                    'type' => 'simple',
+                    'attribute_family_id' => 1,
+                    'sku' => $product[0],
+                    'branch_name' => 'branch01',
+                ]);
+
+            } catch (\Exception $e) {
+                continue;
+            }
+        }
+
+        // Flash success message and redirect
+        session()->flash('success', 'Products Uploaded Successfully.');
+        return redirect('/admin/catalog/products');
+    }
+
+
+    /**
      * Store a newly created resource in storage.
      *
      * @return \Illuminate\Http\Response
@@ -165,17 +219,17 @@ class ProductController extends Controller
     public function store()
     {
         if (
-            ! request()->get('family')
+            !request()->get('family')
             && ProductType::hasVariants(request()->input('type'))
             && request()->input('sku') != ''
         ) {
-            return redirect(url()->current() . '?type=' . request()->input('type') . '&family=' . request()->input('attribute_family_id') . '&sku=' . request()->input('sku'));
+            return redirect(url()->current() . '?type=' . request()->input('type') . '&family=' . request()->input('attribute_family_id') . '&sku=' . request()->input('sku') . request()->input('branch_name'));
         }
 
         if (
             ProductType::hasVariants(request()->input('type'))
-            && (! request()->has('super_attributes')
-                || ! count(request()->get('super_attributes')))
+            && (!request()->has('super_attributes')
+                || !count(request()->get('super_attributes')))
         ) {
             session()->flash('error', trans('admin::app.catalog.products.configurable-error'));
 
@@ -183,9 +237,10 @@ class ProductController extends Controller
         }
 
         $this->validate(request(), [
-            'type'                => 'required',
+            'type' => 'required',
             'attribute_family_id' => 'required',
-            'sku'                 => ['required', 'unique:products,sku', new Slug],
+            'sku' => ['required', 'unique:products,sku', new Slug],
+            'branch_name' => 'required'
         ]);
 
         $product = $this->productRepository->create(request()->all());
@@ -221,6 +276,7 @@ class ProductController extends Controller
      */
     public function update(ProductForm $request, $id)
     {
+
         $data = request()->all();
 
         $multiselectAttributeCodes = [];
@@ -241,7 +297,7 @@ class ProductController extends Controller
 
         if (count($multiselectAttributeCodes)) {
             foreach ($multiselectAttributeCodes as $multiselectAttributeCode) {
-                if (! isset($data[$multiselectAttributeCode])) {
+                if (!isset($data[$multiselectAttributeCode])) {
                     $data[$multiselectAttributeCode] = [];
                 }
             }
@@ -267,7 +323,7 @@ class ProductController extends Controller
         $this->productInventoryRepository->saveInventories(request()->all(), $product);
 
         return response()->json([
-            'message'      => __('admin::app.catalog.products.saved-inventory-message'),
+            'message' => __('admin::app.catalog.products.saved-inventory-message'),
             'updatedTotal' => $this->productInventoryRepository->where('product_id', $product->id)->sum('qty'),
         ]);
     }
@@ -295,7 +351,7 @@ class ProductController extends Controller
     {
         $originalProduct = $this->productRepository->findOrFail($productId);
 
-        if (! $originalProduct->getTypeInstance()->canBeCopied()) {
+        if (!$originalProduct->getTypeInstance()->canBeCopied()) {
             session()->flash(
                 'error',
                 trans('admin::app.response.product-can-not-be-copied', [
@@ -395,11 +451,11 @@ class ProductController extends Controller
     {
         $data = request()->all();
 
-        if (! isset($data['massaction-type'])) {
+        if (!isset($data['massaction-type'])) {
             return redirect()->back();
         }
 
-        if (! $data['massaction-type'] == 'update') {
+        if (!$data['massaction-type'] == 'update') {
             return redirect()->back();
         }
 
@@ -408,8 +464,8 @@ class ProductController extends Controller
         foreach ($productIds as $productId) {
             $this->productRepository->update([
                 'channel' => null,
-                'locale'  => null,
-                'status'  => $data['update-options'],
+                'locale' => null,
+                'status' => $data['update-options'],
             ], $productId);
         }
 
@@ -442,8 +498,8 @@ class ProductController extends Controller
 
             foreach ($this->productRepository->searchProductByAttribute(request()->input('query')) as $row) {
                 $results[] = [
-                    'id'   => $row->product_id,
-                    'sku'  => $row->sku,
+                    'id' => $row->product_id,
+                    'sku' => $row->sku,
                     'name' => $row->name,
                 ];
             }
@@ -464,7 +520,7 @@ class ProductController extends Controller
     public function download($productId, $attributeId)
     {
         $productAttribute = $this->productAttributeValueRepository->findOneWhere([
-            'product_id'   => $productId,
+            'product_id' => $productId,
             'attribute_id' => $attributeId,
         ]);
 

@@ -58,7 +58,6 @@
 @endsection
 
 @section('full-content-wrapper')
-
     <div class="full-content-wrapper">
         {!! view_render_event('bagisto.shop.home.content.before') !!}
 
